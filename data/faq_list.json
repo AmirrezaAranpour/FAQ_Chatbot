@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "category": "Services",
+    "question": "What services do you offer?"
+  },
+  {
+    "id": 2,
+    "category": "Services",
+    "question": "What is included in the Discovery session?"
+  },
+  {
+    "id": 3,
+    "category": "Pricing",
+    "question": "What are your pricing models?"
+  },
+  {
+    "id": 4,
+    "category": "Pricing",
+    "question": "What are the payment terms for a Fixed Price project?"
+  },
+  {
+    "id": 5,
+    "category": "Pricing",
+    "question": "How does Time & Materials billing work?"
+  },
+  {
+    "id": 6,
+    "category": "Process",
+    "question": "What is your engagement process from start to finish?"
+  },
+  {
+    "id": 7,
+    "category": "Process",
+    "question": "Can we sign an NDA?"
+  },
+  {
+    "id": 8,
+    "category": "Support",
+    "question": "What are your support hours?"
+  },
+  {
+    "id": 9,
+    "category": "Support",
+    "question": "What is your SLA for a critical outage (Severity 1)?"
+  },
+  {
+    "id": 10,
+    "category": "Policies",
+    "question": "What is your privacy policy?"
+  },
+  {
+    "id": 11,
+    "category": "Policies",
+    "question": "What is your refund policy for Fixed Price work?"
+  },
+  {
+    "id": 12,
+    "category": "Policies",
+    "question": "Can meetings be rescheduled?"
+  }
+]

@@ -1,0 +1,138 @@
+[
+  {
+    "id": 1,
+    "category": "Services",
+    "question": "What services do you offer?",
+    "reference_answer": "We offer Discovery (initial assessment), MVP builds, data analytics & dashboards, internal automation/RAG chatbots, and maintenance & support.\n\nSources: services.md",
+    "sources": [
+      "services.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 2,
+    "category": "Services",
+    "question": "What is included in the Discovery session?",
+    "reference_answer": "Discovery is a 60‑minute session to understand goals and constraints. The deliverable is a 1–2 page summary plus a recommended solution approach.\n\nSources: services.md",
+    "sources": [
+      "services.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 3,
+    "category": "Pricing",
+    "question": "What are your pricing models?",
+    "reference_answer": "We support Fixed Price (project-based) and Time & Materials (hourly/weekly).\n\nSources: pricing.md",
+    "sources": [
+      "pricing.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 4,
+    "category": "Pricing",
+    "question": "What are the payment terms for a Fixed Price project?",
+    "reference_answer": "For Fixed Price, work typically starts after the first milestone payment. Typical Fixed Price milestones are 40% at start, 40% mid‑project, and 20% on delivery.\n\nSources: pricing.md",
+    "sources": [
+      "pricing.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 5,
+    "category": "Pricing",
+    "question": "How does Time & Materials billing work?",
+    "reference_answer": "Time & Materials is billed hourly/weekly and is best for evolving scope. Weekly time reports are provided.\n\nSources: pricing.md",
+    "sources": [
+      "pricing.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 6,
+    "category": "Process",
+    "question": "What is your engagement process from start to finish?",
+    "reference_answer": "The process is: (1) contact & needs assessment (NDA if needed), (2) proposal & timeline (scope, estimate, pricing model), and (3) delivery in short sprints with regular check‑ins.\n\nSources: process.md",
+    "sources": [
+      "process.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 7,
+    "category": "Process",
+    "question": "Can we sign an NDA?",
+    "reference_answer": "Yes—an NDA can be signed if needed during the initial contact and needs assessment stage.\n\nSources: process.md",
+    "sources": [
+      "process.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 8,
+    "category": "Support",
+    "question": "What are your support hours?",
+    "reference_answer": "Support business hours are Monday to Friday, 09:00–17:00 (CET/CEST).\n\nSources: support.md",
+    "sources": [
+      "support.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 9,
+    "category": "Support",
+    "question": "What is your SLA for a critical outage (Severity 1)?",
+    "reference_answer": "For Severity 1 (critical outage), the initial response time is within 4 business hours.\n\nSources: support.md",
+    "sources": [
+      "support.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 10,
+    "category": "Policies",
+    "question": "What is your privacy policy?",
+    "reference_answer": "Client data is used only to deliver the project, and access is minimal on a need‑to‑know basis.\n\nSources: policies.md",
+    "sources": [
+      "policies.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 11,
+    "category": "Policies",
+    "question": "What is your refund policy for Fixed Price work?",
+    "reference_answer": "If work has not started: full refund of the first milestone is possible. If work has started: refund is calculated based on completed work.\n\nSources: policies.md",
+    "sources": [
+      "policies.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 12,
+    "category": "Policies",
+    "question": "Can meetings be rescheduled?",
+    "reference_answer": "Yes—meetings can be rescheduled with at least 24 hours notice.\n\nSources: policies.md",
+    "sources": [
+      "policies.md"
+    ],
+    "in_scope": true
+  },
+  {
+    "id": 101,
+    "category": "Out of scope",
+    "question": "What is Bitcoin price today?",
+    "reference_answer": "Sorry — I don’t have that information in my FAQ knowledge base. Please rephrase your question or contact support.",
+    "sources": [],
+    "in_scope": false
+  },
+  {
+    "id": 102,
+    "category": "Out of scope",
+    "question": "Can you give me medical advice?",
+    "reference_answer": "Sorry — I don’t have that information in my FAQ knowledge base. Please rephrase your question or contact support.",
+    "sources": [],
+    "in_scope": false
+  }
+]

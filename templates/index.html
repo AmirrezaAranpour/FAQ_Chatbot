@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FAQ Chatbot (RAG)</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">R</div>
+        <div>
+          <div class="title">FAQ Chatbot</div>
+          <div class="subtitle">Grounded answers via Retrieval-Augmented Generation</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="reindex" class="btn secondary" title="Rebuild the knowledge index">Reindex</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="panel left">
+        <h2>How it works</h2>
+        <p>
+          This bot answers using only the project's <span class="kbd">knowledge_base</span>.
+          If the question is out of scope or unsupported, it will respond with a safe fallback.
+        </p>
+
+        <div class="card">
+          <h3>Sample in-scope questions</h3>
+          <ul>
+            <li>What are your pricing models?</li>
+            <li>What is your SLA for Severity 1?</li>
+            <li>Can we sign an NDA?</li>
+          </ul>
+          <button class="btn small" data-fill="in">Try one</button>
+        </div>
+
+        <div class="card">
+          <h3>Sample out-of-scope questions</h3>
+          <ul>
+            <li>What is Bitcoin price today?</li>
+            <li>Can you give me legal advice?</li>
+          </ul>
+          <button class="btn small" data-fill="out">Try one</button>
+        </div>
+
+        <div class="card subtle">
+          <h3>Notes</h3>
+          <p class="muted">
+            Confidence is computed from retrieval similarity. Low confidence triggers fallback.
+            Sources show which KB files were used.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel right">
+        <div class="chatbox" id="chat"></div>
+
+        <div class="composer">
+          <input id="q" type="text" placeholder="Ask a question…" autocomplete="off" />
+          <button id="send" class="btn">Send</button>
+        </div>
+
+        <div class="footer">
+          <span class="badge" id="status">Ready</span>
+          <span class="muted">Tip: press <span class="kbd">Enter</span> to send</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/markdown.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

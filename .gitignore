@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Envs
+.venv/
+venv/
+.env
+
+# Caches / indexes
+.cache/
+*.index
+*.faiss
+*.pkl
+
+# OS/Editor
+.DS_Store
+.vscode/
