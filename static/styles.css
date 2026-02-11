@@ -176,3 +176,10 @@ input:focus{ border-color: rgba(90,167,255,.45); }
   color: rgba(255,255,255,0.65);
   font-size: 12px;
 }
+
+
+/* Mode chips */
+.chip.mode.grounded{ border-color: rgba(46, 204, 113, 0.35); }
+.chip.mode.fallback{ border-color: rgba(245, 158, 11, 0.35); }
+.chip.mode.clarify{ border-color: rgba(90, 167, 255, 0.45); }
+.chip.mode.error{ border-color: rgba(239, 68, 68, 0.35); }

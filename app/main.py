@@ -24,6 +24,22 @@ if FAQ_PATH.exists():
     except Exception:
         _FAQ_ITEMS = []
 FAQ_ITEMS = [x for x in _FAQ_ITEMS if x.get("in_scope") is True and int(x.get("id", 0)) <= 12]
+# Optional alias map to capture common paraphrases/typos and short queries.
+ALIAS_PATH = Path("data/faq_aliases.json")
+_ALIASES = []
+if ALIAS_PATH.exists():
+    try:
+        _ALIASES = json.loads(ALIAS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        _ALIASES = []
+ALIASES = _ALIASES
+
+def _core_by_id(core_id: int):
+    for it in FAQ_ITEMS:
+        if int(it.get("id", 0)) == int(core_id):
+            return it
+    return None
+
 
 def _norm_q(s: str) -> str:
     # Normalize a user question for routing/matching.
@@ -72,14 +88,15 @@ def is_out_of_scope(question: str) -> bool:
     if any(x in q for x in ["phone number", "phone", "call you", "office address", "address", "location"]):
         return True
 
-    # Legal document drafting (keep NDA in-scope)
+    # Legal document drafting is out-of-scope.
+    # NDA is in-scope only for *signing*; drafting/templates are out-of-scope.
+    if "nda" in q and any(v in q for v in ["draft", "write", "generate", "template", "create"]):
+        return True
+
     if any(x in q for x in ["terms & conditions", "terms and conditions", "t&c", "t & c"]):
         return True
 
-    if ("contract" in q or "agreement" in q) and any(v in q for v in ["draft", "write", "generate", "template"]):
-        # NDA is explicitly in-scope
-        if "nda" in q:
-            return False
+    if ("contract" in q or "agreement" in q) and any(v in q for v in ["draft", "write", "generate", "template", "create"]):
         return True
 
     # "terms" is ambiguous: treat as out-of-scope only when it clearly refers to legal T&Cs
@@ -89,12 +106,170 @@ def is_out_of_scope(question: str) -> bool:
     return False
 
 
-def match_core_faq(question: str):
-    # Return the best matching core FAQ item (1..12) for in-scope questions.
-    # This is intentionally biased toward returning one of the 12 stable
-    # 'reference answers' to avoid snippet-dumping for paraphrases.
-    if not FAQ_ITEMS:
+
+def route_core_by_keywords(question: str):
+    """
+    Deterministic routing for in-scope queries (including short inputs like 'pricing' or 'support').
+    Returns a core FAQ item dict or None.
+    """
+    q = _norm_q(question)
+
+    # Services / discovery
+    if q in {"service", "services"} or "what services" in q:
+        return _core_by_id(1)
+    if "discovery" in q and any(x in q for x in ["include", "included", "deliver", "deliverable", "end", "after the discovery", "after discovery"]):
+        return _core_by_id(2)
+
+    # Pricing / payments
+    if any(x in q for x in ["time & materials", "time and materials", "t&m", "t & m", "hourly", "weekly billing"]):
+        return _core_by_id(5)
+    if "fixed price" in q and any(x in q for x in ["milestone", "payment", "pay", "start", "start work", "terms"]):
+        return _core_by_id(4)
+    if any(x in q for x in ["pricing models", "pricing model", "price models", "price model"]) or q in {"pricing", "price"}:
+        return _core_by_id(3)
+    if q in {"payment", "payments"}:
+        return _core_by_id(4)
+
+    # Process / timeline / sprints
+    if any(x in q for x in ["engagement", "process", "workflow", "steps", "step by step", "timeline", "how long", "sprint", "sprints", "iterations"]):
+        # Avoid catching purely pricing questions that contain 'terms'
+        return _core_by_id(6)
+
+    # NDA (signing) – only if not asking to draft/template it
+    if "nda" in q and not any(x in q for x in ["draft", "template", "write", "generate", "create"]):
+        return _core_by_id(7)
+
+    # Support / SLA
+    if any(x in q for x in ["support hours", "business hours", "reach support", "contact support", "support times", "support channels"]) or q in {"support"}:
+        return _core_by_id(8)
+    if any(x in q for x in ["sla", "severity", "sev 1", "critical outage"]):
+        return _core_by_id(9)
+
+    # Policies
+    if any(x in q for x in ["privacy", "client data"]):
+        return _core_by_id(10)
+    if any(x in q for x in ["refund", "cancel", "cancellation"]):
+        return _core_by_id(11)
+    if any(x in q for x in ["reschedule", "rescheduling", "meeting", "move a meeting"]):
+        return _core_by_id(12)
+
+    return None
+
+
+def answer_pricing_ranges(question: str):
+    """
+    Returns an indicative range answer if the user asks about cost for a known service.
+    Uses only pricing.md (non-binding guidance).
+    """
+    q = _norm_q(question)
+    wants_cost = any(x in q for x in ["how much", "cost", "price", "quote", "budget", "rate", "pricing for"]) and not any(x in q for x in ["pricing model", "pricing models", "price model", "price models"])
+    if not wants_cost:
         return None
+
+    # If user asks for an "exact price list" — KB doesn't have that.
+    if any(x in q for x in ["exact price", "price list", "full price list", "per service", "all services"]):
+        return {
+            "answer": (
+                "The FAQ knowledge base does not include an exact per‑service price list. "
+                "It only provides **indicative, non‑binding ranges**.\n\n"
+                "**Indicative ranges (non‑binding):**\n"
+                "- Discovery: free for the first session\n"
+                "- Small MVP: from €1,200+ (scope‑dependent)\n"
+                "- Data dashboard: from €800+\n"
+                "- Internal RAG chatbot: from €1,500+\n\n"
+                "If you share what you want to build, I can point you to the closest range and the best pricing model."
+            ),
+            "sources": ["pricing.md"],
+            "confidence": 0.75,
+            "is_fallback": False,
+            "mode": "grounded",
+        }
+
+    # Specific services
+    if "mvp" in q:
+        ans = "**Indicative range (non‑binding):** Small MVP is from **€1,200+** (scope‑dependent)."
+        return {"answer": ans, "sources": ["pricing.md"], "confidence": 0.75, "is_fallback": False, "mode": "grounded"}
+    if any(x in q for x in ["dashboard", "dashboards", "data analytics"]):
+        ans = "**Indicative range (non‑binding):** Data dashboard projects are from **€800+**."
+        return {"answer": ans, "sources": ["pricing.md"], "confidence": 0.75, "is_fallback": False, "mode": "grounded"}
+    if any(x in q for x in ["rag", "chatbot", "internal bot", "internal chatbot", "automation"]):
+        ans = "**Indicative range (non‑binding):** Internal RAG chatbot/automation projects are from **€1,500+**."
+        return {"answer": ans, "sources": ["pricing.md"], "confidence": 0.75, "is_fallback": False, "mode": "grounded"}
+    if "discovery" in q:
+        ans = "**Indicative range (non‑binding):** The first Discovery session is **free**."
+        return {"answer": ans, "sources": ["pricing.md"], "confidence": 0.75, "is_fallback": False, "mode": "grounded"}
+
+    # Ambiguous cost question: ask to clarify (still in-scope)
+    service_hints = ["discovery", "mvp", "dashboard", "dashboards", "rag", "chatbot", "automation", "support", "maintenance"]
+    mentions_model = any(x in q for x in ["fixed price", "time & materials", "time and materials", "t&m", "t & m"])
+    if wants_cost and (not any(h in q for h in service_hints)) and (not mentions_model):
+        return {
+            "answer": (
+                "I can help with pricing, but I need one detail: **which service** are you asking about "
+                "(Discovery, MVP Build, dashboard, internal RAG chatbot, or maintenance/support)?\n\n"
+                "**Indicative ranges (non‑binding):**\n"
+                "- Discovery: free for the first session\n"
+                "- Small MVP: from €1,200+ (scope‑dependent)\n"
+                "- Data dashboard: from €800+\n"
+                "- Internal RAG chatbot: from €1,500+"
+            ),
+            "sources": ["pricing.md"],
+            "confidence": 0.55,
+            "is_fallback": True,
+            "mode": "clarify",
+        }
+
+    return None
+
+def match_core_faq(question: str):
+    """
+    Try to map the user's question to one of the 12 core FAQ items.
+    Priority:
+      1) deterministic keyword routing (handles short inputs like 'pricing', 'support', etc.)
+      2) alias routing (common paraphrases/typos)
+      3) fuzzy match over the 12 core questions
+    """
+    # 1) keyword routing
+    item = route_core_by_keywords(question)
+    if item is not None:
+        item["_match_score"] = 0.95
+        return item
+
+    qn = _norm_q(question)
+
+    # 2) aliases
+    best_alias = None
+    best_alias_score = 0.0
+    for a in ALIASES:
+        alias = a.get("alias", "")
+        if not alias:
+            continue
+        sc = difflib.SequenceMatcher(None, qn, _norm_q(alias)).ratio()
+        if sc > best_alias_score:
+            best_alias_score = sc
+            best_alias = a
+    if best_alias is not None and best_alias_score >= 0.78:
+        it = _core_by_id(int(best_alias.get("core_id", 0)))
+        if it is not None:
+            it["_match_score"] = best_alias_score
+            return it
+
+    # 3) fuzzy match over core questions (last resort)
+    best = None
+    best_score = 0.0
+    for it in FAQ_ITEMS:
+        q = it.get("question", "")
+        if not q:
+            continue
+        score = difflib.SequenceMatcher(None, qn, _norm_q(q)).ratio()
+        if score > best_score:
+            best_score = score
+            best = it
+
+    if best is not None and best_score >= 0.84:
+        best["_match_score"] = best_score
+        return best
+    return None
 
     qn = _norm_q(question)
     if not qn:
@@ -335,64 +510,72 @@ def home():
 
 @app.post("/chat")
 def chat(payload: ChatIn):
-    question = payload.question.strip()
-    if not question:
-        return JSONResponse(
-            {"answer": "Please type a question to get started.", "sources": [], "confidence": 0.0, "is_fallback": True}
-        )
+    try:
+        question = payload.question.strip()
+        if not question:
+            return JSONResponse(
+                {"answer": "Please type a question to get started.", "sources": [], "confidence": 0.0, "is_fallback": True, "mode": "fallback"}
+            )
 
-    q_lower = question.lower().strip()
+        q_lower = question.lower().strip()
 
-    # Special-case: '24/7' queries should be explicit and not dump unrelated SLA details.
-    if any(x in q_lower for x in ["24/7", "24x7"]):
-        return JSONResponse({
-            "answer": "The knowledge base lists business hours (Mon–Fri, 09:00–17:00 CET/CEST) and does not mention 24/7 support.",
-            "sources": ["support.md"],
-            "confidence": 0.5,
-            "is_fallback": False,
-        })
+        # Special-case: '24/7' queries should be explicit and not dump unrelated SLA details.
+        if any(x in q_lower for x in ["24/7", "24x7"]):
+            return JSONResponse({
+                "answer": "The knowledge base lists business hours (Mon–Fri, 09:00–17:00 CET/CEST) and does not mention 24/7 support.",
+                "sources": ["support.md"],
+                "confidence": 0.5,
+                "is_fallback": False,
+                "mode": "grounded",
+            })
 
-    # Hard out-of-scope guard: do not answer from retrieval.
-    if is_out_of_scope(question):
-        return JSONResponse({"answer": FALLBACK_MESSAGE, "sources": [], "confidence": 0.0, "is_fallback": True})
+        # Hard out-of-scope guard: do not answer from retrieval.
+        if is_out_of_scope(question):
+            return JSONResponse({"answer": FALLBACK_MESSAGE, "sources": [], "confidence": 0.0, "is_fallback": True, "mode": "fallback"})
 
+        # Pricing ranges (service-specific or clarify)
+        pr = answer_pricing_ranges(question)
+        if pr is not None:
+            return JSONResponse(pr)
 
+        # Core FAQ routing (stable, question-focused answers)
+        core = match_core_faq(question)
+        if core is not None:
+            srcs = core.get("sources") or []
+            return JSONResponse({
+                "answer": (core.get("reference_answer", "") or "").strip(),
+                "sources": srcs,
+                "confidence": _clamp01(core.get("_match_score", 0.9)),
+                "is_fallback": False,
+                "mode": "grounded",
+            })
 
-    core = match_core_faq(question)
-    if core is not None:
-        srcs = core.get("sources") or []
-        return JSONResponse({
-            "answer": core.get("reference_answer", "").strip(),
-            "sources": srcs,
-            "confidence": _clamp01(core.get("_match_score", 0.9)),
-            "is_fallback": False,
-        })
+        # Retrieval + (optional) LLM / extractive answering
+        chunks, best_score = retrieve(_norm_q(question))
+        chunks = rerank_chunks(question, chunks)
+        confidence = float(best_score)
 
-    chunks, best_score = retrieve(_norm_q(question))
-    chunks = rerank_chunks(question, chunks)
-    confidence = float(best_score)
+        if should_fallback(question, chunks, best_score):
+            return JSONResponse({"answer": FALLBACK_MESSAGE, "sources": [], "confidence": confidence, "is_fallback": True, "mode": "fallback"})
 
-    if should_fallback(question, chunks, best_score):
-        return JSONResponse({"answer": FALLBACK_MESSAGE, "sources": [], "confidence": confidence, "is_fallback": True})
+        context = format_context(chunks)
 
-    context = format_context(chunks)
+        answer = generate_answer(question=question, context=context)
 
-    # If an LLM is configured, use it; otherwise generate a short extractive answer.
-    answer = generate_answer(question=question, context=context)
+        used_sources = []
+        if not answer:
+            answer, used_sources = answer_from_chunks(question, chunks)
 
-    used_sources = []
-    if not answer:
-        answer, used_sources = answer_from_chunks(question, chunks)
+        # Prefer sources actually used by extractive answer; otherwise use retrieved sources.
+        sources = sorted({c.get("source", "") for c in chunks if c.get("source")})
+        if used_sources:
+            sources = used_sources
 
-    # Sources: prefer sources actually used by extractive answer; otherwise use retrieved sources.
-    sources = sorted({c.get("source", "") for c in chunks if c.get("source")})
-    if used_sources:
-        sources = used_sources
+        return JSONResponse({"answer": (answer or "").strip(), "sources": sources, "confidence": confidence, "is_fallback": False, "mode": "grounded"})
 
-    if answer and "\n\nSources:" not in answer:
-        answer = answer.strip() + "\n\nSources: " + ", ".join(sources)
-
-    return JSONResponse({"answer": answer, "sources": sources, "confidence": confidence, "is_fallback": False})
+    except Exception:
+        # Fail-safe: never crash the server for a bad request path.
+        return JSONResponse({"answer": "Server error. Please try again.", "sources": [], "confidence": 0.0, "is_fallback": True, "mode": "error"})
 
 
 @app.post("/reindex")

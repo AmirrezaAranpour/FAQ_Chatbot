@@ -6,10 +6,19 @@ import re
 from typing import List, Dict, Tuple
 
 import numpy as np
-import faiss
-from sentence_transformers import SentenceTransformer
+try:
+    import faiss  # type: ignore
+except Exception:  # pragma: no cover
+    faiss = None  # type: ignore
+try:
+    from sentence_transformers import SentenceTransformer  # type: ignore
+except Exception:  # pragma: no cover
+    SentenceTransformer = None  # type: ignore
 
 from .config import KB_DIR, INDEX_PATH, META_PATH, TOP_K, SIMILARITY_THRESHOLD, EMBED_MODEL, LEXICAL_THRESHOLD
+
+# If FAISS isn't available, we fall back to a NumPy-based index file.
+EMB_PATH = INDEX_PATH.with_suffix('.npy')
 
 @dataclass
 class Chunk:
@@ -18,10 +27,35 @@ class Chunk:
 
 _MODEL: SentenceTransformer | None = None
 
-def _get_model() -> SentenceTransformer:
+
+class _HashEmbedder:
+    """Lightweight fallback embedder (no external ML deps).
+    Produces a deterministic bag-of-words hash embedding, normalized for cosine similarity.
+    """
+    def __init__(self, dim: int = 512):
+        self.dim = dim
+
+    def encode(self, texts, normalize_embeddings=True, show_progress_bar=False, **kwargs):
+        import re
+        vecs = []
+        for t in texts:
+            v = np.zeros((self.dim,), dtype="float32")
+            for tok in re.findall(r"[a-z0-9]+", (t or "").lower()):
+                h = (hash(tok) % self.dim)
+                v[h] += 1.0
+            if normalize_embeddings:
+                n = float(np.linalg.norm(v) + 1e-9)
+                v = v / n
+            vecs.append(v)
+        return np.stack(vecs, axis=0)
+
+def _get_model():
     global _MODEL
     if _MODEL is None:
-        _MODEL = SentenceTransformer(EMBED_MODEL)
+        if SentenceTransformer is not None:
+            _MODEL = SentenceTransformer(EMBED_MODEL)
+        else:
+            _MODEL = _HashEmbedder(dim=512)
     return _MODEL
 
 def _read_kb_files(kb_dir: Path) -> List[Tuple[str, str]]:
@@ -70,23 +104,41 @@ def build_index() -> Dict[str, int]:
     emb = model.encode(texts, normalize_embeddings=True, batch_size=32, show_progress_bar=False)
     emb = np.asarray(emb, dtype="float32")
 
-    index = faiss.IndexFlatIP(emb.shape[1])
-    index.add(emb)
-
     META_PATH.parent.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(index, str(INDEX_PATH))
+
+    if faiss is not None:
+        index = faiss.IndexFlatIP(emb.shape[1])
+        index.add(emb)
+        faiss.write_index(index, str(INDEX_PATH))
+    else:
+        # NumPy fallback: store normalized embeddings in a .npy file
+        np.save(str(EMB_PATH), emb)
 
     with META_PATH.open("w", encoding="utf-8") as f:
         json.dump([c.__dict__ for c in all_chunks], f, ensure_ascii=False, indent=2)
 
     return {"docs": len(docs), "chunks": len(all_chunks), "dim": int(emb.shape[1])}
 
-def _load() -> Tuple[faiss.Index, List[Dict]]:
-    if not INDEX_PATH.exists() or not META_PATH.exists():
+def _load():
+    """Load the vector index + metadata.
+
+    Returns (index_or_embeddings, meta).
+    - If FAISS is available: index_or_embeddings is a FAISS index.
+    - Otherwise: index_or_embeddings is a NumPy array of normalized embeddings.
+    """
+    if faiss is not None:
+        if not INDEX_PATH.exists() or not META_PATH.exists():
+            build_index()
+        index = faiss.read_index(str(INDEX_PATH))
+        meta = json.loads(META_PATH.read_text(encoding='utf-8'))
+        return index, meta
+
+    # NumPy fallback
+    if not EMB_PATH.exists() or not META_PATH.exists():
         build_index()
-    index = faiss.read_index(str(INDEX_PATH))
-    meta = json.loads(META_PATH.read_text(encoding="utf-8"))
-    return index, meta
+    emb = np.load(str(EMB_PATH)).astype('float32')
+    meta = json.loads(META_PATH.read_text(encoding='utf-8'))
+    return emb, meta
 
 _STOPWORDS = set([
     "the","a","an","and","or","to","of","in","on","for","with","is","are","do","does","can","we","you","your","our",
@@ -109,22 +161,28 @@ def lexical_overlap_ratio(question: str, text: str) -> float:
     return len(inter) / max(1, len(q))
 
 def retrieve(question: str) -> Tuple[List[Dict], float]:
-    index, meta = _load()
+    index_or_emb, meta = _load()
     model = _get_model()
 
     q_emb = model.encode([question], normalize_embeddings=True, show_progress_bar=False)
-    q_emb = np.asarray(q_emb, dtype="float32")
+    q_emb = np.asarray(q_emb, dtype='float32')[0]
 
-    scores, ids = index.search(q_emb, TOP_K)
-    scores = scores[0].tolist()
-    ids = ids[0].tolist()
+    if faiss is not None:
+        scores, ids = index_or_emb.search(np.asarray([q_emb], dtype='float32'), TOP_K)
+        scores = scores[0].tolist()
+        ids = ids[0].tolist()
+    else:
+        emb = index_or_emb
+        sims = emb @ q_emb
+        ids = np.argsort(-sims)[:TOP_K].tolist()
+        scores = sims[ids].tolist()
 
     results: List[Dict] = []
     for s, i in zip(scores, ids):
         if i == -1:
             continue
         item = dict(meta[i])
-        item["score"] = float(s)
+        item['score'] = float(s)
         results.append(item)
 
     best = float(scores[0]) if scores else 0.0

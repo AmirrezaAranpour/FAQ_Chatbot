@@ -102,5 +102,97 @@
   {
     "alias": "discovery next steps",
     "core_id": 6
+  },
+  {
+    "alias": "When do you start work on a Fixed Price project?",
+    "core_id": 4
+  },
+  {
+    "alias": "When do you start for Fixed Price?",
+    "core_id": 4
+  },
+  {
+    "alias": "fixed price start",
+    "core_id": 4
+  },
+  {
+    "alias": "start fixed price",
+    "core_id": 4
+  },
+  {
+    "alias": "fixed price milestones",
+    "core_id": 4
+  },
+  {
+    "alias": "Do you deliver in sprints?",
+    "core_id": 6
+  },
+  {
+    "alias": "Do you work in sprints?",
+    "core_id": 6
+  },
+  {
+    "alias": "Do you do weekly sprints?",
+    "core_id": 6
+  },
+  {
+    "alias": "timeline",
+    "core_id": 6
+  },
+  {
+    "alias": "How long does it take?",
+    "core_id": 6
+  },
+  {
+    "alias": "What’s your timeline?",
+    "core_id": 6
+  },
+  {
+    "alias": "step-by-step engagement workflow",
+    "core_id": 6
+  },
+  {
+    "alias": "What support channels do you offer?",
+    "core_id": 8
+  },
+  {
+    "alias": "support channels",
+    "core_id": 8
+  },
+  {
+    "alias": "email support",
+    "core_id": 8
+  },
+  {
+    "alias": "chat support",
+    "core_id": 8
+  },
+  {
+    "alias": "cancel fixed price",
+    "core_id": 11
+  },
+  {
+    "alias": "refund fixed price",
+    "core_id": 11
+  },
+  {
+    "alias": "refund policy",
+    "core_id": 11
+  },
+  {
+    "alias": "Can I cancel after work starts?",
+    "core_id": 11
+  },
+  {
+    "alias": "reschedule meeting",
+    "core_id": 12
+  },
+  {
+    "alias": "meeting reschedule",
+    "core_id": 12
+  },
+  {
+    "alias": "Can I move a meeting?",
+    "core_id": 12
   }
 ]

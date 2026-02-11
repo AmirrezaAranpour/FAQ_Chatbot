@@ -17,9 +17,9 @@ const samplesOut = [
   "Where is your office address?",
 ];
 
-function chip(text) {
+function chip(text, extraClass='') {
   const span = document.createElement('span');
-  span.className = 'chip';
+  span.className = 'chip' + (extraClass ? (' ' + extraClass) : '');
   span.textContent = text;
   return span;
 }
@@ -37,7 +37,7 @@ function addMsg(text, who, metaObj=null) {
   if (metaObj) {
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.appendChild(chip(metaObj.mode));
+    meta.appendChild(chip(metaObj.mode, `mode ${metaObj.mode}`));
     meta.appendChild(chip(`confidence=${metaObj.conf.toFixed(2)}`));
     if (metaObj.sources && metaObj.sources.length) {
       metaObj.sources.forEach(s => meta.appendChild(chip(s)));
@@ -72,7 +72,7 @@ async function sendQuestion(q) {
     addMsg(data.answer, 'bot', {
       conf: data.confidence ?? 0,
       sources: data.sources ?? [],
-      mode: isFallback ? "fallback" : "grounded",
+      mode: (data.mode ?? (isFallback ? "fallback" : "grounded")),
     });
   } catch (e) {
     addMsg("Server error. Please try again.", 'bot', {conf: 0, sources: [], mode:"error"});

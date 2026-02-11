@@ -11,7 +11,7 @@ META_PATH = CACHE_DIR / "kb.chunks.json"
 TOP_K = int(os.getenv("TOP_K", "4"))
 
 # Cosine similarity = inner product on normalized vectors
-SIMILARITY_THRESHOLD = float(os.getenv("SIM_THRESHOLD", "0.40"))
+SIMILARITY_THRESHOLD = float(os.getenv("SIM_THRESHOLD", "0.35"))  # raise to reduce random matches; can tune via env
 
 # Embedding model (robust for English + multilingual questions)
 EMBED_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")

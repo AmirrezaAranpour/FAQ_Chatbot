@@ -1,0 +1,82 @@
+[
+  {
+    "q": "What services do you offer?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "What is included in the Discovery session?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "What are your pricing models?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "When do you start work on a Fixed Price project?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "How does Time & Materials billing work?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "Do you deliver in sprints?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "What are your support hours?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "What is your SLA for Severity 1?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "What is your privacy policy?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "Can I cancel a Fixed Price project and get a refund?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "Can meetings be rescheduled?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "How much does a small MVP typically cost?",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "How much will it be?",
+    "expect_mode": "clarify"
+  },
+  {
+    "q": "What is Bitcoin price today?",
+    "expect_mode": "fallback"
+  },
+  {
+    "q": "Can you write a legal terms & conditions page for my website?",
+    "expect_mode": "fallback"
+  },
+  {
+    "q": "Medical advice for headache?",
+    "expect_mode": "fallback"
+  },
+  {
+    "q": "nda template please",
+    "expect_mode": "fallback"
+  },
+  {
+    "q": "support channels",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "prcing modls plz",
+    "expect_mode": "grounded"
+  },
+  {
+    "q": "supprt hours?",
+    "expect_mode": "grounded"
+  }
+]
