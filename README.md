@@ -1,54 +1,87 @@
-# ARV FAQ Chatbot (Pro+)
+# FAQ Chatbot (ARV Digital Services)
 
-A lightweight, **reviewer-friendly** FAQ chatbot for **ARV Digital Services**.
-It answers **only** from the local markdown knowledge base (`knowledge_base/`) and provides clear **response control**:
+A lightweight FAQ chatbot that answers **only** from the local markdown knowledge base (`knowledge_base/`).
+It includes a clean, dark web UI with a **guided prompt panel** and clear response modes.
 
-- **grounded** — answer is supported by the KB and includes citations (source filenames)
-- **clarify** — question is in-scope but too vague; asks one short follow‑up
-- **fallback** — out-of-scope or not covered by the KB; refuses safely (no guessing)
-- **error** — server-side failure; returns a safe error message
+## Key features
 
-> No external browsing. No external data sources. Runs locally.
-
----
-
-## What this repo contains
-
-- **FastAPI backend** (local API + safety/grounding logic)
-- **Simple web UI** (mode badge + sources, plus a Reindex button)
-- **Hybrid retrieval** over KB chunks:
-  - BM25 (keyword relevance)
-  - deterministic embeddings (hash-based) with an **optional** Sentence-Transformers upgrade
-- **Stable “core FAQ”** for consistent answers on canonical questions
-- Local scripts to build the index and run test cases
+- **Grounded answers**: responds using only the KB and shows **source filenames**
+- **Clarify mode**: asks a short follow‑up when the question is in‑scope but too vague
+- **Safe fallback**: refuses out‑of‑scope or unsupported questions (no guessing)
+- **Simple local RAG**: builds a small local index from markdown files (no heavy vector DB)
+- **Web UI**: dark theme, mode badges (grounded / clarify / fallback / error), copy‑friendly answers
 
 ---
 
-## Quickstart
+## Project structure
 
-### 1) Install & run
+```
+.
+├─ app/
+│  ├─ main.py            # FastAPI server (UI + /chat endpoint)
+│  ├─ rag.py             # Index loading + retrieval
+│  ├─ llm.py             # Answer/clarify/fallback logic (prompting)
+│  └─ config.py          # Settings (thresholds, paths, etc.)
+├─ knowledge_base/       # Markdown KB (the only source of truth)
+├─ scripts/
+│  ├─ build_index.py     # Build/rebuild the local index
+│  ├─ smoke_test.py      # Local CLI smoke tests
+│  └─ smoke_test_http.py # HTTP smoke tests against a running server
+├─ templates/            # Server-rendered HTML
+└─ static/               # CSS/JS (UI)
+```
+
+---
+
+## Requirements
+
+- Python **3.10+** recommended (works best on 3.10–3.12)
+- No GPU required
+
+---
+
+## Setup
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-# Optional: build index once (otherwise it auto-builds on first run)
+### Build the index (ingest the KB)
+
+```bash
 python scripts/build_index.py
+```
 
+You should see a message similar to:
+
+- `Index built: {'docs': X, 'chunks': Y, 'dim': 384}`
+
+---
+
+## Run
+
+```bash
 uvicorn app.main:app --reload --port 8001
 ```
 
 Open: `http://127.0.0.1:8001`
 
-### 2) Rebuild the index after KB edits
+If you see **Address already in use**, pick a different port (e.g. `--port 8002`).
 
-- Click **Reindex** in the UI, or:
+---
 
-```bash
-curl -X POST http://127.0.0.1:8001/reindex
-```
+## How to use the UI
+
+Left panel includes:
+
+- **Guided prompts**: choose a Topic + Example, then **Insert** (fills input) or **Ask now**
+- **Modes legend**: what Grounded / Clarify / Fallback means
+- **Tips**: how to ask better questions
+
+> If the UI looks “stuck” after changes, hard refresh the page  
+> Windows/Linux: `Ctrl + Shift + R` — macOS: `Cmd + Shift + R`
 
 ---
 
@@ -59,146 +92,62 @@ curl -X POST http://127.0.0.1:8001/reindex
 Request:
 
 ```json
-{ "question": "What are your pricing models?" }
+{ "question": "..." }
 ```
 
-Response (schema):
+Response:
 
 ```json
 {
-  "answer": "...",
-  "mode": "grounded|clarify|fallback|error",
-  "confidence": 0.0,
-  "sources": ["pricing.md"],
-  "is_fallback": false
+  "answer": "…",
+  "mode": "grounded",
+  "confidence": 0.78,
+  "sources": ["pricing.md"]
 }
 ```
 
+- `mode` is one of: `grounded`, `clarify`, `fallback`, `error`
+- `sources` are KB filenames used to answer
+
 ### `POST /reindex`
 
-Rebuilds the local index from `knowledge_base/`.
+Rebuilds the index from `knowledge_base/` (same as running `scripts/build_index.py`).
 
 ---
 
-## Project structure
+## Knowledge base rules (important)
 
-```
-app/
-  main.py            # FastAPI app + routes
-  service.py         # answer_question(): orchestrates routing + retrieval
-  router.py          # alias/core matching, out-of-scope, clarify logic
-  answering.py       # formatting and final answer selection
-  kb/loader.py       # loads + chunks markdown docs
-  retrieval/
-    bm25.py          # keyword scoring
-    embeddings.py    # hash embedder + optional SentenceTransformer
-    index.py         # build/load index
-
-data/
-  core_faq.json       # canonical Q/A (stable outputs + sources)
-  aliases.json        # short triggers (pricing, support, sla, refund, ...)
-  test_cases.json     # local test suite
-
-docs/
-  PROMPTS.md          # user-facing messages (fallback/clarify) documentation
-  FAQ_MAP.md          # complete FAQ list (core FAQ) and routing order
-  CHANGELOG.md        # version notes
-
-knowledge_base/
-  00_scope.md         # scope boundary definition
-  *.md                # policies, pricing, process, services, support
-
-static/               # UI assets
-templates/            # UI template
-.cache/               # built index (safe to delete)
-```
+- The KB (`knowledge_base/*.md`) is the **only** knowledge source.
+- If something is not in the KB, the assistant must **fallback** (no invented details).
+- For vague in-scope questions, the assistant may ask **one** short clarifying question.
 
 ---
 
-## How answering works
+## Testing
 
-The router tries, in order:
-
-1) **Alias match** (for short queries like `pricing`, `support`, `sla`)
-2) **Core FAQ match** (fuzzy match against canonical questions)
-3) **Hybrid retrieval** (BM25 + embeddings) over KB chunks
-
-Then response control is applied:
-
-- **Out-of-scope** → `fallback`
-- **In-scope but ambiguous** → `clarify`
-- **In-scope with support** → `grounded` with citations
-
-See: `docs/FAQ_MAP.md` and `docs/PROMPTS.md`.
-
----
-
-## Configuration (env vars)
-
-You can tune behavior without touching code:
-
-- `SIM_THRESHOLD` (default `0.50`) — minimum hybrid score to answer grounded
-- `CORE_MATCH_THRESHOLD` (default `0.75`) — fuzzy match threshold for canonical questions
-- `TOP_K` (default `4`) — number of chunks retrieved
-- `HYBRID_ALPHA` (default `0.65`) — semantic weight vs BM25
-- `FALLBACK_MESSAGE` — customize safe fallback text
-- `EMPTY_MESSAGE` — text shown for blank input
-
-Paths:
-
-- `KB_DIR`, `CACHE_DIR`, `CORE_FAQ_PATH`, `ALIASES_PATH`
-
----
-
-## Local tests
+### CLI smoke test
 
 ```bash
-python scripts/run_tests.py
+python scripts/smoke_test.py
 ```
 
-Edit / extend tests in `data/test_cases.json`.
+### HTTP smoke test
+
+1) Start the server  
+2) Run:
+
+```bash
+python scripts/smoke_test_http.py --base-url http://127.0.0.1:8001
+```
 
 ---
 
 ## Troubleshooting
 
-### UI badge colors / mode label looks wrong
-
-Usually browser cache. Try:
-- Hard refresh: **Ctrl+Shift+R** (Windows/Linux) or **Cmd+Shift+R** (macOS)
-- DevTools → Network → **Disable cache** → reload
-
-> This project also uses cache-busting (`?v={{ app_version }}`) for static assets.
-
-### Port already in use
-
-Run on another port:
-
-```bash
-uvicorn app.main:app --reload --port 8002
-```
-
-### Reset the index
-
-If you changed the KB a lot:
-
-```bash
-rm -rf .cache
-python scripts/build_index.py
-```
-
----
-
-## Optional: better embeddings (semantic retrieval)
-
-This repo runs without heavy ML dependencies.
-If you want stronger semantic matching, install:
-
-```bash
-pip install sentence-transformers
-```
-
-The code will automatically use it if available.
+- **500 errors**: check the terminal stack trace; usually a missing import or a stale cache.
+- **UI changes not visible**: hard refresh (`Ctrl/Cmd + Shift + R`).  
+  You can also clear the browser cache or restart `uvicorn`.
+- **Index seems outdated**: run `python scripts/build_index.py` again.
 
 ---
 
