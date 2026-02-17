@@ -1,117 +1,218 @@
-const chat = document.getElementById('chat');
-const input = document.getElementById('q');
-const sendBtn = document.getElementById('send');
-const statusEl = document.getElementById('status');
-const reindexBtn = document.getElementById('reindex');
 
-const samplesIn = [
-  "What are your pricing models?",
-  "What is your SLA for a critical outage (Severity 1)?",
-  "Can we sign an NDA?",
+const guided = {
+  "Services": [
+    "What services do you offer?",
+    "What is included in the Discovery session?",
+    "What do you actually deliver in Discovery?",
+    "What deliverables do you provide for an MVP build?",
+    "What does Maintenance & Support include?"
+  ],
+  "Pricing": [
+    "What are your pricing models?",
+    "What are the payment terms for a Fixed Price project?",
+    "How does Time & Materials billing work?",
+    "When do you start work for Fixed Price projects?"
+  ],
+  "Engagement process": [
+    "What is your engagement process from start to finish?",
+    "Can we sign an NDA?",
+    "What happens after the first call — what are the steps?",
+    "Do you deliver work in sprints?"
+  ],
+  "Support & SLA": [
+    "What are your support hours?",
+    "What support channels do you offer?",
+    "What is your SLA for a critical outage (Severity 1)?",
+    "Do you offer 24/7 support?"
+  ],
+  "Policies": [
+    "What is your privacy policy?",
+    "What is your refund policy for Fixed Price work?",
+    "Can meetings be rescheduled?",
+    "If work started, how is refund calculated?"
+  ]
+};
+
+function mountGuide() {
+  const topicSel = $("topic");
+  const promptSel = $("prompt");
+  if (!topicSel || !promptSel) return;
+
+  // topics
+  Object.keys(guided).forEach((t) => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    topicSel.appendChild(opt);
+  });
+
+  function refreshPrompts() {
+    const t = topicSel.value;
+    promptSel.innerHTML = "";
+    (guided[t] || []).forEach((q) => {
+      const opt = document.createElement("option");
+      opt.value = q;
+      opt.textContent = q;
+      promptSel.appendChild(opt);
+    });
+  }
+
+  topicSel.addEventListener("change", refreshPrompts);
+  refreshPrompts();
+
+  const insertBtn = $("insert");
+  const askBtn = $("askNow");
+
+  function currentPrompt() {
+    const v = (promptSel.value || "").trim();
+    return v;
+  }
+
+  insertBtn && insertBtn.addEventListener("click", () => {
+    const q = currentPrompt();
+    if (!q) return;
+    $("q").value = q;
+    $("q").focus();
+  });
+
+  askBtn && askBtn.addEventListener("click", () => {
+    const q = currentPrompt();
+    if (!q) return;
+    ask(q);
+  });
+}
+
+
+/* global mdToHtml */
+const $ = (id) => document.getElementById(id);
+
+const samples = [
+  "What services do you offer?",
   "What is included in the Discovery session?",
-];
-
-const samplesOut = [
+  "Is the Discovery session free?",
+  "How does Time & Materials billing work?",
+  "When do you start work for Fixed Price projects?",
+  "Do you deliver work in sprints?",
+  "What are your support hours?",
+  "What is your SLA for Severity 1?",
+  "What is your refund policy for Fixed Price work?",
+  "Can meetings be rescheduled?",
   "What is Bitcoin price today?",
-  "Can you draft a legal contract for me?",
-  "Where is your office address?",
+  "Can you draft a legal contract for me?"
 ];
 
-function chip(text, extraClass='') {
-  const span = document.createElement('span');
-  span.className = 'chip' + (extraClass ? (' ' + extraClass) : '');
-  span.textContent = text;
-  return span;
+function setStatus(text) {
+  $("status").textContent = text;
 }
 
-function addMsg(text, who, metaObj=null) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + who;
-  if (who === 'bot' && typeof mdToHtml === 'function') {
-    div.innerHTML = mdToHtml(text);
-  } else {
-    div.textContent = text;
-  }
-  chat.appendChild(div);
+function el(tag, cls, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
 
-  if (metaObj) {
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.appendChild(chip(metaObj.mode, `mode ${metaObj.mode}`));
-    meta.appendChild(chip(`confidence=${metaObj.conf.toFixed(2)}`));
-    if (metaObj.sources && metaObj.sources.length) {
-      metaObj.sources.forEach(s => meta.appendChild(chip(s)));
-    } else {
-      meta.appendChild(chip("no sources"));
+function renderMessage({ role, text, meta }) {
+  const wrap = el("div", "msg " + role);
+  const bubble = el("div", "bubble");
+  bubble.innerHTML = mdToHtml(text || "");
+  wrap.appendChild(bubble);
+
+  if (meta) {
+    const metaRow = el("div", "meta");
+    const badge = el("span", "badge " + (meta.mode || "grounded"));
+    badge.textContent = (meta.mode || "grounded").toUpperCase();
+    metaRow.appendChild(badge);
+
+    const conf = el("span", "");
+    conf.textContent = "confidence=" + (meta.confidence ?? 0).toFixed(2);
+    metaRow.appendChild(conf);
+
+    if (meta.sources && meta.sources.length) {
+      const srcWrap = el("div", "sources");
+      meta.sources.forEach((s) => {
+        const chip = el("span", "source");
+        chip.textContent = s;
+        srcWrap.appendChild(chip);
+      });
+      metaRow.appendChild(srcWrap);
     }
-    chat.appendChild(meta);
+    bubble.appendChild(metaRow);
   }
 
-  chat.scrollTop = chat.scrollHeight;
+  $("chat").appendChild(wrap);
+  $("chat").scrollTop = $("chat").scrollHeight;
 }
 
-async function sendQuestion(q) {
-  const question = (q ?? input.value).trim();
-  if (!question) return;
+async function ask(question) {
+  const q = (question || "").trim();
+  if (!q) return;
 
-  addMsg(question, 'me');
-  input.value = '';
-  sendBtn.disabled = true;
-  statusEl.textContent = "Thinking…";
+  renderMessage({ role: "user", text: q });
+  $("q").value = "";
+  setStatus("Thinking…");
 
   try {
-    const res = await fetch('/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ question })
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q })
     });
 
     const data = await res.json();
-    const isFallback = !!data.is_fallback;
-
-    addMsg(data.answer, 'bot', {
-      conf: data.confidence ?? 0,
-      sources: data.sources ?? [],
-      mode: (data.mode ?? (isFallback ? "fallback" : "grounded")),
-    });
+    const meta = {
+      mode: data.mode || (data.is_fallback ? "fallback" : "grounded"),
+      confidence: Number(data.confidence || 0),
+      sources: data.sources || []
+    };
+    renderMessage({ role: "bot", text: data.answer || "", meta });
+    setStatus("Ready");
   } catch (e) {
-    addMsg("Server error. Please try again.", 'bot', {conf: 0, sources: [], mode:"error"});
-  } finally {
-    sendBtn.disabled = false;
-    statusEl.textContent = "Ready";
+    renderMessage({ role: "bot", text: "Server error. Please try again.", meta: { mode: "error", confidence: 0, sources: [] } });
+    setStatus("Error");
   }
 }
 
-sendBtn.addEventListener('click', () => sendQuestion());
-input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuestion(); });
+function mountSamples() {
+  const wrap = $("samples");
+  if (!wrap) return;
+  samples.forEach((s) => {
+    const c = el("div", "chip");
+    c.textContent = s;
+    c.addEventListener("click", () => ask(s));
+    wrap.appendChild(c);
+  });
+}
 
-document.querySelector('[data-fill="in"]').addEventListener('click', () => {
-  const q = samplesIn[Math.floor(Math.random() * samplesIn.length)];
-  sendQuestion(q);
-});
-document.querySelector('[data-fill="out"]').addEventListener('click', () => {
-  const q = samplesOut[Math.floor(Math.random() * samplesOut.length)];
-  sendQuestion(q);
-});
-
-reindexBtn.addEventListener('click', async () => {
-  if (!confirm("Rebuild index from knowledge_base?")) return;
-  statusEl.textContent = "Reindexing…";
+async function reindex() {
+  setStatus("Reindexing…");
   try {
-    const res = await fetch('/reindex', { method: 'POST' });
+    const res = await fetch("/reindex", { method: "POST" });
     const data = await res.json();
-    if (data.ok) {
-      addMsg(`Reindex complete. docs=${data.stats.docs}, chunks=${data.stats.chunks}`, 'bot',
-        {conf: 1.0, sources: [], mode:"system"});
+    if (data && data.ok) {
+      setStatus("Reindexed");
+      setTimeout(() => setStatus("Ready"), 1000);
     } else {
-      addMsg("Reindex failed.", 'bot', {conf: 0, sources: [], mode:"error"});
+      setStatus("Reindex failed");
     }
   } catch (e) {
-    addMsg("Reindex failed due to server error.", 'bot', {conf: 0, sources: [], mode:"error"});
-  } finally {
-    statusEl.textContent = "Ready";
+    setStatus("Reindex failed");
   }
-});
+}
 
-addMsg("Hi! Ask me about services, pricing, process, support, or policies. I will answer only from the knowledge base.", 'bot',
-  {conf: 1.0, sources: ["knowledge_base"], mode:"system"});
+window.addEventListener("DOMContentLoaded", () => {
+  mountSamples();
+  mountGuide();
+  renderMessage({
+    role: "bot",
+    text: "Hi! Ask me anything about ARV Digital Services (services, pricing, process, support/SLA, or policies).\n\nIf something is unclear, I’ll ask a quick clarifying question.",
+    meta: { mode: "grounded", confidence: 1.0, sources: [] }
+  });
+
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    ask($("q").value);
+  });
+
+  $("reindex").addEventListener("click", () => reindex());
+});

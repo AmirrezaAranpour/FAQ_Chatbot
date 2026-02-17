@@ -1,82 +1,82 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>FAQ Chatbot (RAG)</title>
-  <link rel="stylesheet" href="/static/styles.css?v=13.1" />
+  <title>ARV FAQ Chatbot</title>
+  <link rel="stylesheet" href="/static/styles.css?v=ui-1.2">
+  <script defer src="/static/markdown.js?v=ui-1.2"></script>
+  <script defer src="/static/app.js?v=ui-1.2"></script>
 </head>
 <body>
-  <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo">R</div>
-        <div>
-          <div class="title">FAQ Chatbot</div>
-          <div class="subtitle">Grounded answers via Retrieval-Augmented Generation</div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">ARV</div>
+      <div class="title">
+        <div class="h1">ARV FAQ Chatbot</div>
+        <div class="sub">Answers are grounded in the provided knowledge base only.</div>
+      </div>
+    </div>
+    <div class="right">
+      <span class="pill" id="status">Ready</span>
+      <button class="btn ghost" id="reindex" title="Rebuild the local index from knowledge_base/">Reindex</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="side">
+<div class="card">
+        <div class="cardTitle">Guided prompts</div>
+        <div class="guide">
+          <div class="guideRow">
+            <label for="topic" class="label">Topic</label>
+            <select id="topic" class="select"></select>
+          </div>
+          <div class="guideRow">
+            <label for="prompt" class="label">Example</label>
+            <select id="prompt" class="select"></select>
+          </div>
+          <div class="guideActions">
+            <button class="btn" id="insert" type="button">Insert</button>
+            <button class="btn primary" id="askNow" type="button">Ask</button>
+          </div>
+          <div class="muted">
+            Tip: include the <b>service</b> (Discovery/MVP/Dashboard/RAG/Support) to avoid clarifying questions.
+          </div>
         </div>
       </div>
-      <div class="actions">
-        <button id="reindex" class="btn secondary" title="Rebuild the knowledge index">Reindex</button>
+
+      <div class="card">
+        <div class="cardTitle">Modes</div>
+        <div class="modes">
+          <div class="modeLine"><span class="badge grounded">GROUNDED</span><span>Answer is supported by the KB and cites sources.</span></div>
+          <div class="modeLine"><span class="badge clarify">CLARIFY</span><span>In-scope but vague — asks one quick follow‑up.</span></div>
+          <div class="modeLine"><span class="badge fallback">FALLBACK</span><span>Out-of-scope or not covered — refuses safely.</span></div>
+        </div>
       </div>
-    </header>
 
-    <main class="main">
-      <section class="panel left">
-        <h2>How it works</h2>
-        <p>
-          This bot answers using only the project's <span class="kbd">knowledge_base</span>.
-          If the question is out of scope or unsupported, it will respond with a safe fallback.
-        </p>
+      <div class="card">
+        <div class="cardTitle">Tips</div>
+        <ul class="tips">
+          <li>Ask about services, pricing, engagement process, support/SLA, or policies.</li>
+          <li>If your question is vague, the bot may ask a clarifying question.</li>
+          <li>For out-of-scope topics (medical/legal/real-time data), it should fall back safely.</li>
+        </ul>
+      </div>
+    </aside>
 
-        <div class="card">
-          <h3>Sample in-scope questions</h3>
-          <ul>
-            <li>What are your pricing models?</li>
-            <li>What is your SLA for Severity 1?</li>
-            <li>Can we sign an NDA?</li>
-          </ul>
-          <button class="btn small" data-fill="in">Try one</button>
-        </div>
+    <section class="chatWrap">
+      <div id="chat" class="chat"></div>
 
-        <div class="card">
-          <h3>Sample out-of-scope questions</h3>
-          <ul>
-            <li>What is Bitcoin price today?</li>
-            <li>Can you give me legal advice?</li>
-          </ul>
-          <button class="btn small" data-fill="out">Try one</button>
-        </div>
-
-        <div class="card subtle">
-          <h3>Notes</h3>
-          <p class="muted">
-            Confidence is computed from retrieval similarity. Low confidence triggers fallback.
-            Sources show which KB files were used.
-          </p>
-        </div>
-      </section>
-
-      <section class="panel right">
-        <div class="chatbox" id="chat"></div>
-
-        <div class="composer">
-          <input id="q" type="text" placeholder="Ask a question…" autocomplete="off" />
-          <button id="send" class="btn">Send</button>
-        </div>
-
-        <div class="footer">
-          <span class="badge" id="status">Ready</span>
-          <span class="muted">Tip: press <span class="kbd">Enter</span> to send</span>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <script src="/static/markdown.js?v=13.1"></script>
-  <script src="/static/app.js?v=13.1"></script>
+      <form id="form" class="composer">
+        <input id="q" type="text" placeholder="Ask a question…" autocomplete="off"/>
+        <button id="send" class="btn primary" type="submit">Send</button>
+      </form>
+      <div class="footer">Tip: press Enter to send</div>
+    </section>
+  </main>
 </body>
 </html>
